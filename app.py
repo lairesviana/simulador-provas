@@ -9,7 +9,7 @@ st.set_page_config(layout="wide")
 # =========================
 # 🔐 CONTROLE DE ACESSO
 # =========================
-TOKEN_VALIDO = "abc120DEF"
+TOKEN_VALIDO = st.secrets["TOKEN"]
 
 if "acesso_liberado" not in st.session_state:
     st.session_state.acesso_liberado = False
