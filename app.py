@@ -11,14 +11,14 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 
-/* 🔥 Esconde ícone GitHub (principal) */
-header a[href*="github"] {
+/* 🔥 Esconde botão Fork + GitHub */
+button[title="Fork this app"],
+button[aria-label="Fork this app"] {
     display: none !important;
 }
 
-/* 🔥 Fallback (estrutura interna Streamlit) */
-.css-1rs6os,
-.css-18ni7ap {
+/* 🔥 fallback geral (pega o container do header direito) */
+header div:has(svg) {
     display: none !important;
 }
 
