@@ -10,22 +10,29 @@ st.set_page_config(layout="wide")
 # =========================
 st.markdown("""
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+
+// 🔥 OBSERVA MUDANÇAS NO DOM (Streamlit usa React)
+const observer = new MutationObserver(() => {
 
     document.querySelectorAll('a, button').forEach(el => {
 
-        if (el.innerText.includes("Fork") || el.innerHTML.includes("svg")) {
+        if (el.innerText.includes("Fork")) {
 
-            el.addEventListener("click", function(e) {
+            el.onclick = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-            });
+                return false;
+            };
 
         }
 
     });
 
 });
+
+// 🔥 Ativa monitoramento contínuo
+observer.observe(document.body, { childList: true, subtree: true });
+
 </script>
 """, unsafe_allow_html=True)
 
