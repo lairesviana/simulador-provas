@@ -6,38 +6,7 @@ import time
 st.set_page_config(layout="wide")
 
 # =========================
-# 🔒 BLOQUEAR CLIQUE GITHUB / FORK
-# =========================
-st.markdown("""
-<script>
-
-// 🔥 OBSERVA MUDANÇAS NO DOM (Streamlit usa React)
-const observer = new MutationObserver(() => {
-
-    document.querySelectorAll('a, button').forEach(el => {
-
-        if (el.innerText.includes("Fork")) {
-
-            el.onclick = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            };
-
-        }
-
-    });
-
-});
-
-// 🔥 Ativa monitoramento contínuo
-observer.observe(document.body, { childList: true, subtree: true });
-
-</script>
-""", unsafe_allow_html=True)
-
-# =========================
-# 🔐 SENHAS
+# 🔐 SENHAS (SECRETS)
 # =========================
 USER_PASSWORD = st.secrets["USER_PASSWORD"]
 ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]
@@ -51,6 +20,7 @@ if "acesso" not in st.session_state:
 if st.session_state.acesso is None:
 
     st.markdown("## 🔒 Acesso ao Sistema")
+
     senha = st.text_input("Digite a senha", type="password")
 
     if senha:
@@ -127,7 +97,7 @@ for _, row in df.iterrows():
     })
 
 # =========================
-# 🏁 FINALIZAR
+# 🏁 FINALIZAR PROVA
 # =========================
 def finalizar():
     acertos = sum(
@@ -182,9 +152,19 @@ with col2:
 
         restante, total_tempo = calcular_tempo()
 
-        cor = "red" if restante < 600 else "black"
+        # 🎯 COR AUTOMÁTICA (CLARO / ESCURO)
+        if restante < 600:
+            cor = "#ff4b4b"
+        elif restante < 1800:
+            cor = "#facc15"
+        else:
+            cor = "var(--text-color)"
 
-        st.markdown(f"<h3 style='color:{cor}'>⏱️ {formatar(restante)}</h3>", unsafe_allow_html=True)
+        st.markdown(
+            f"<h3 style='color:{cor}'>⏱️ {formatar(restante)}</h3>",
+            unsafe_allow_html=True
+        )
+
         st.progress(restante / total_tempo)
 
         if restante == 0 and not st.session_state.finalizado:
@@ -235,7 +215,7 @@ with col2:
                 st.session_state.indice += 1
                 st.rerun()
 
-        # RESULTADO
+        # 📊 RESULTADO + REVISÃO
         if st.session_state.finalizado:
             r = st.session_state.resultado
 
