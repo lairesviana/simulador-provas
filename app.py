@@ -6,41 +6,44 @@ import time
 st.set_page_config(layout="wide")
 
 # =========================
-# 🎨 OCULTAR APENAS GITHUB
+# 🔒 BLOQUEAR CLIQUE GITHUB / FORK
 # =========================
 st.markdown("""
-<style>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
 
-/* 🔥 Esconde botão Fork + GitHub */
-button[title="Fork this app"],
-button[aria-label="Fork this app"] {
-    display: none !important;
-}
+    document.querySelectorAll('a, button').forEach(el => {
 
-/* 🔥 fallback geral (pega o container do header direito) */
-header div:has(svg) {
-    display: none !important;
-}
+        if (el.innerText.includes("Fork") || el.innerHTML.includes("svg")) {
 
-</style>
+            el.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
+        }
+
+    });
+
+});
+</script>
 """, unsafe_allow_html=True)
 
 # =========================
-# 🔐 SENHAS (SECRETS)
+# 🔐 SENHAS
 # =========================
 USER_PASSWORD = st.secrets["USER_PASSWORD"]
 ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]
 
-# =========================
-# 🔐 CONTROLE DE ACESSO
-# =========================
 if "acesso" not in st.session_state:
     st.session_state.acesso = None
 
+# =========================
+# 🔐 LOGIN
+# =========================
 if st.session_state.acesso is None:
 
     st.markdown("## 🔒 Acesso ao Sistema")
-
     senha = st.text_input("Digite a senha", type="password")
 
     if senha:
@@ -58,7 +61,7 @@ if st.session_state.acesso is None:
     st.stop()
 
 # =========================
-# 📦 ESTADO INICIAL
+# 📦 ESTADO
 # =========================
 def init_state():
     defaults = {
@@ -103,7 +106,7 @@ def calcular_tempo():
     return restante, total
 
 # =========================
-# 📊 CARREGAR PERGUNTAS
+# 📊 CARREGAR EXCEL
 # =========================
 df = pd.read_excel("Perguntas.xlsx")
 df.columns = df.columns.str.strip()
@@ -117,7 +120,7 @@ for _, row in df.iterrows():
     })
 
 # =========================
-# 🏁 FINALIZAR PROVA
+# 🏁 FINALIZAR
 # =========================
 def finalizar():
     acertos = sum(
@@ -172,8 +175,7 @@ with col2:
 
         restante, total_tempo = calcular_tempo()
 
-        # 🔥 COR DINÂMICA DO TEMPO
-        cor = "red" if restante < 600 else "white"
+        cor = "red" if restante < 600 else "black"
 
         st.markdown(f"<h3 style='color:{cor}'>⏱️ {formatar(restante)}</h3>", unsafe_allow_html=True)
         st.progress(restante / total_tempo)
@@ -226,9 +228,7 @@ with col2:
                 st.session_state.indice += 1
                 st.rerun()
 
-        # =========================
-        # 📊 RESULTADO IMEDIATO
-        # =========================
+        # RESULTADO
         if st.session_state.finalizado:
             r = st.session_state.resultado
 
