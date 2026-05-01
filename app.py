@@ -20,7 +20,6 @@ if "acesso" not in st.session_state:
 if st.session_state.acesso is None:
 
     st.markdown("## 🔒 Acesso ao Sistema")
-
     senha = st.text_input("Digite a senha", type="password")
 
     if senha:
@@ -92,7 +91,7 @@ questoes = []
 for _, row in df.iterrows():
     questoes.append({
         "pergunta": limpar(row["PERGUNTA"]),
-        "opcoes": [limpar(row[c]) for c in ["A","B","C","D","E"]],
+        "opcoes": [limpar(row[c]) for c in ["A", "B", "C", "D", "E"]],
         "resposta": limpar(row["RESPOSTA"])
     })
 
@@ -154,28 +153,34 @@ with col2:
 
         # 🎯 COR AUTOMÁTICA (CLARO / ESCURO)
         if restante < 600:
-            cor = "#ff4b4b"
-        elif restante < 1800:
-            cor = "#facc15"
-        else:
-            cor = "var(--text-color)"
+            st.markdown(
+                f"<h3 style='color:#ff4b4b'>⏱️ {formatar(restante)}</h3>",
+                unsafe_allow_html=True
+            )
 
-        st.markdown(
-            f"<h3 style='color:{cor}'>⏱️ {formatar(restante)}</h3>",
-            unsafe_allow_html=True
-        )
+        elif restante < 1800:
+            st.markdown(
+                f"<h3 style='color:#facc15'>⏱️ {formatar(restante)}</h3>",
+                unsafe_allow_html=True
+            )
+
+        else:
+            st.markdown(
+                f"<h3>⏱️ {formatar(restante)}</h3>",
+                unsafe_allow_html=True
+            )
 
         st.progress(restante / total_tempo)
 
         if restante == 0 and not st.session_state.finalizado:
             finalizar()
 
-        st.write(f"Questão {idx+1} de {total}")
-        st.progress(len(st.session_state.respostas)/total)
+        st.write(f"Questão {idx + 1} de {total}")
+        st.progress(len(st.session_state.respostas) / total)
 
         st.write(q["pergunta"])
 
-        letras = ["A","B","C","D","E"]
+        letras = ["A", "B", "C", "D", "E"]
         opcoes = [f"{letras[i]}) {q['opcoes'][i]}" for i in range(5)]
 
         resposta = st.session_state.respostas.get(idx)
@@ -211,7 +216,7 @@ with col2:
                     st.session_state.timer_ativo = False
 
         with c3:
-            if st.button("➡ Próxima") and idx < total-1:
+            if st.button("➡ Próxima") and idx < total - 1:
                 st.session_state.indice += 1
                 st.rerun()
 
@@ -246,9 +251,9 @@ with col3:
     for i in range(0, total, cols):
         linhas = st.columns(cols)
 
-        for j, idx in enumerate(range(i, min(i+cols, total))):
+        for j, idx in enumerate(range(i, min(i + cols, total))):
             with linhas[j]:
-                if st.button(str(idx+1)):
+                if st.button(str(idx + 1)):
                     st.session_state.indice = idx
                     st.rerun()
                     
