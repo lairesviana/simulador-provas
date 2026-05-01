@@ -7,36 +7,39 @@ import time
 st.set_page_config(layout="wide")
 
 # =========================
-# 🔐 CONTROLE DE ACESSO
+# 🔐 SEGURANÇA
 # =========================
-TOKEN_VALIDO = st.secrets["TOKEN"]
+USER_PASSWORD = st.secrets["USER_PASSWORD"]
+ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]
 
-if "acesso_liberado" not in st.session_state:
-    st.session_state.acesso_liberado = False
-
-params = st.query_params
-
-# 1️⃣ Se veio pelo link com token → libera direto
-if "token" in params and params["token"] == TOKEN_VALIDO:
-    st.session_state.acesso_liberado = True
-
-# 2️⃣ Se ainda não liberado → mostra login e PARA TUDO
-if not st.session_state.acesso_liberado:
-
-    st.markdown("## 🔒 Acesso restrito")
-
-    senha = st.text_input("Digite a senha de acesso", type="password")
-
-    if senha == TOKEN_VALIDO:
-        st.session_state.acesso_liberado = True
-        st.rerun()
-    else:
-        st.stop()
-
-# 👉 A PARTIR DAQUI O APP NORMAL (SEM INTERFERÊNCIA)
+if "acesso" not in st.session_state:
+    st.session_state.acesso = None  # None, "user", "admin"
 
 # =========================
-# ESTADO GLOBAL
+# 🔑 LOGIN
+# =========================
+if st.session_state.acesso is None:
+
+    st.markdown("## 🔒 Acesso ao Sistema")
+
+    senha = st.text_input("Digite a senha", type="password")
+
+    if senha:
+        if senha == ADMIN_PASSWORD:
+            st.session_state.acesso = "admin"
+            st.rerun()
+
+        elif senha == USER_PASSWORD:
+            st.session_state.acesso = "user"
+            st.rerun()
+
+        else:
+            st.error("Senha inválida")
+
+    st.stop()
+
+# =========================
+# ESTADO
 # =========================
 def init_state():
     defaults = {
@@ -68,63 +71,24 @@ def limpar(texto):
 # TIMER
 # =========================
 def calcular_tempo():
-    duracao_total = 3 * 60 * 60
+    total = 3 * 60 * 60
 
     if st.session_state.timer_ativo:
-        tempo_passado = int(time.time() - st.session_state.timer_inicio)
-        tempo_restante = max(0, duracao_total - tempo_passado)
+        passado = int(time.time() - st.session_state.timer_inicio)
+        restante = max(0, total - passado)
     else:
-        tempo_restante = duracao_total
+        restante = total
 
-    return tempo_restante, duracao_total
+    return restante, total
 
-def formatar_tempo(seg):
+def formatar(seg):
     h = seg // 3600
     m = (seg % 3600) // 60
     s = seg % 60
     return f"{h:02d}:{m:02d}:{s:02d}"
 
-def cor_tempo(seg):
-    if seg < 600:
-        return "#ff4b4b"
-    elif seg < 1800:
-        return "#facc15"
-    else:
-        return "var(--text-color)"
-
 # =========================
-# AÇÕES
-# =========================
-def finalizar_prova(auto=False):
-    acertos = sum(
-        1 for i, r in st.session_state.respostas.items()
-        if r == questoes[i]["resposta"]
-    )
-
-    total = len(questoes)
-    nota = (acertos / total) * 10
-
-    resultado = {
-        "data": datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
-        "nota": round(nota, 1),
-        "acertos": acertos,
-        "total": total,
-        "modo": "Tempo esgotado" if auto else "Finalizado"
-    }
-
-    st.session_state.historico.append(resultado)
-    st.session_state.ultimo_resultado = resultado
-    st.session_state.finalizado = True
-
-def refazer_prova():
-    st.session_state.respostas = {}
-    st.session_state.indice = 0
-    st.session_state.finalizado = False
-    st.session_state.timer_inicio = None
-    st.session_state.timer_ativo = False
-
-# =========================
-# LOAD
+# LOAD EXCEL
 # =========================
 df = pd.read_excel("Perguntas.xlsx")
 df.columns = df.columns.str.strip()
@@ -139,6 +103,27 @@ questoes = [
 ]
 
 # =========================
+# FINALIZAR
+# =========================
+def finalizar():
+    acertos = sum(
+        1 for i, r in st.session_state.respostas.items()
+        if r == questoes[i]["resposta"]
+    )
+
+    total = len(questoes)
+    nota = (acertos / total) * 10
+
+    resultado = {
+        "nota": round(nota, 1),
+        "acertos": acertos,
+        "total": total
+    }
+
+    st.session_state.ultimo_resultado = resultado
+    st.session_state.finalizado = True
+
+# =========================
 # LAYOUT
 # =========================
 col1, col2, col3 = st.columns([1.2, 4, 1.6])
@@ -149,11 +134,16 @@ col1, col2, col3 = st.columns([1.2, 4, 1.6])
 with col1:
     st.markdown("## 📘 Menu")
 
-    if st.button("🏠 Iniciar Prova", use_container_width=True):
+    if st.button("🏠 Iniciar Prova"):
         st.session_state.pagina = "prova"
 
-    if st.button("📊 Resultados", use_container_width=True):
+    if st.button("📊 Resultados"):
         st.session_state.pagina = "resultado"
+
+    # 🔥 VISÍVEL SÓ PARA ADMIN
+    if st.session_state.acesso == "admin":
+        st.markdown("---")
+        st.success("Modo ADMIN ativado")
 
 # =========================
 # CONTEÚDO
@@ -168,18 +158,10 @@ with col2:
 
         st.markdown("### Simulador de Provas")
 
-        tempo_restante, total_tempo = calcular_tempo()
+        restante, total_tempo = calcular_tempo()
 
-        st.markdown(
-            f"<div style='text-align:right; font-size:20px; color:{cor_tempo(tempo_restante)};'>⏱️ {formatar_tempo(tempo_restante)}</div>",
-            unsafe_allow_html=True
-        )
-
-        st.progress(tempo_restante / total_tempo)
-
-        if tempo_restante == 0 and not st.session_state.finalizado:
-            finalizar_prova(auto=True)
-            st.rerun()
+        st.write(f"⏱️ {formatar(restante)}")
+        st.progress(restante / total_tempo)
 
         st.write(f"Questão {idx+1} de {total}")
         st.progress(len(st.session_state.respostas)/total)
@@ -192,9 +174,9 @@ with col2:
         resposta = st.session_state.respostas.get(idx)
         index = letras.index(resposta) if resposta else None
 
-        escolha = st.radio("", opcoes, index=index, disabled=st.session_state.finalizado)
+        escolha = st.radio("", opcoes, index=index)
 
-        if escolha and not st.session_state.finalizado:
+        if escolha:
             st.session_state.respostas[idx] = escolha[0]
 
             if not st.session_state.timer_ativo:
@@ -212,59 +194,39 @@ with col2:
 
         with c2:
             if not st.session_state.finalizado:
-                if st.button("🏁 Finalizar Prova"):
-                    finalizar_prova()
+                if st.button("🏁 Finalizar"):
+                    finalizar()
             else:
-                if st.button("🔁 Refazer Prova"):
-                    refazer_prova()
+                if st.button("🔁 Refazer"):
+                    st.session_state.respostas = {}
+                    st.session_state.finalizado = False
+                    st.session_state.indice = 0
 
         with c3:
-            if st.button("Próxima ➡") and idx < total-1:
+            if st.button("➡ Próxima") and idx < total-1:
                 st.session_state.indice += 1
                 st.rerun()
 
         if st.session_state.finalizado:
-
             r = st.session_state.ultimo_resultado
-
-            st.markdown("## 📊 Resultado Final")
-            st.success(f"Nota: {r['nota']:.1f}")
-            st.write(f"Acertos: {r['acertos']} / {r['total']}")
-            st.write(f"Modo: {r['modo']}")
-            st.write(f"Data: {r['data']}")
-
-    elif st.session_state.pagina == "resultado":
-
-        st.markdown("## 📊 Histórico")
-
-        if st.session_state.historico:
-            st.dataframe(pd.DataFrame(st.session_state.historico))
-        else:
-            st.info("Nenhuma prova realizada.")
+            st.success(f"Nota: {r['nota']}")
+            st.write(f"Acertos: {r['acertos']}/{r['total']}")
 
 # =========================
 # NAVEGAÇÃO
 # =========================
 with col3:
 
-    if st.session_state.pagina == "prova":
+    st.markdown("### Navegação")
 
-        st.markdown("### Navegação")
+    total = len(questoes)
+    colunas = 5
 
-        total = len(questoes)
-        cols_por_linha = 5
-
-        linhas = [
-            list(range(i, min(i+cols_por_linha, total)))
-            for i in range(0, total, cols_por_linha)
-        ]
-
-        for linha in linhas:
-            cols = st.columns(cols_por_linha)
-
-            for j, i in enumerate(linha):
-                with cols[j]:
-                    if st.button(str(i+1), key=f"nav_{i}"):
-                        st.session_state.indice = i
-                        st.rerun()
-                        
+    for i in range(0, total, colunas):
+        cols = st.columns(colunas)
+        for j, idx in enumerate(range(i, min(i+colunas, total))):
+            with cols[j]:
+                if st.button(str(idx+1)):
+                    st.session_state.indice = idx
+                    st.rerun()
+                    
