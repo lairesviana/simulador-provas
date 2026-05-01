@@ -151,24 +151,21 @@ with col2:
 
         restante, total_tempo = calcular_tempo()
 
-        # 🎯 COR AUTOMÁTICA (CLARO / ESCURO)
+        # 🎯 TIMER CORRIGIDO (CLARO / ESCURO)
         if restante < 600:
             st.markdown(
-                f"<h3 style='color:#ff4b4b'>⏱️ {formatar(restante)}</h3>",
+                f"### <span style='color:#ff4b4b'>⏱️ {formatar(restante)}</span>",
                 unsafe_allow_html=True
             )
 
         elif restante < 1800:
             st.markdown(
-                f"<h3 style='color:#facc15'>⏱️ {formatar(restante)}</h3>",
+                f"### <span style='color:#facc15'>⏱️ {formatar(restante)}</span>",
                 unsafe_allow_html=True
             )
 
         else:
-            st.markdown(
-                f"<h3>⏱️ {formatar(restante)}</h3>",
-                unsafe_allow_html=True
-            )
+            st.markdown(f"### ⏱️ {formatar(restante)}")
 
         st.progress(restante / total_tempo)
 
