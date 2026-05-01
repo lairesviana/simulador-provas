@@ -9,11 +9,20 @@ st.set_page_config(layout="wide")
 # 🎨 OCULTAR APENAS GITHUB
 # =========================
 st.markdown("""
-    <style>
-        a[href*="github.com"] {
-            display: none !important;
-        }
-    </style>
+<style>
+
+/* 🔥 Esconde ícone GitHub (principal) */
+header a[href*="github"] {
+    display: none !important;
+}
+
+/* 🔥 Fallback (estrutura interna Streamlit) */
+.css-1rs6os,
+.css-18ni7ap {
+    display: none !important;
+}
+
+</style>
 """, unsafe_allow_html=True)
 
 # =========================
