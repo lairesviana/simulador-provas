@@ -1,23 +1,33 @@
 import streamlit as st
 import pandas as pd
 import re
-import datetime
 import time
 
 st.set_page_config(layout="wide")
 
 # =========================
-# 🔐 SEGURANÇA
+# 🎨 OCULTAR APENAS GITHUB
+# =========================
+st.markdown("""
+    <style>
+        a[href*="github.com"] {
+            display: none !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# =========================
+# 🔐 SENHAS (SECRETS)
 # =========================
 USER_PASSWORD = st.secrets["USER_PASSWORD"]
 ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]
 
+# =========================
+# 🔐 CONTROLE DE ACESSO
+# =========================
 if "acesso" not in st.session_state:
-    st.session_state.acesso = None  # None, "user", "admin"
+    st.session_state.acesso = None
 
-# =========================
-# 🔑 LOGIN
-# =========================
 if st.session_state.acesso is None:
 
     st.markdown("## 🔒 Acesso ao Sistema")
@@ -39,18 +49,17 @@ if st.session_state.acesso is None:
     st.stop()
 
 # =========================
-# ESTADO
+# 📦 ESTADO INICIAL
 # =========================
 def init_state():
     defaults = {
         "pagina": "prova",
         "indice": 0,
         "respostas": {},
-        "historico": [],
         "finalizado": False,
         "timer_inicio": None,
         "timer_ativo": False,
-        "ultimo_resultado": None
+        "resultado": None
     }
 
     for k, v in defaults.items():
@@ -60,16 +69,19 @@ def init_state():
 init_state()
 
 # =========================
-# UTIL
+# 🔧 FUNÇÕES
 # =========================
-def limpar(texto):
-    if pd.isna(texto):
+def limpar(txt):
+    if pd.isna(txt):
         return ""
-    return re.sub(r"\s+", " ", str(texto)).strip()
+    return re.sub(r"\s+", " ", str(txt)).strip()
 
-# =========================
-# TIMER
-# =========================
+def formatar(seg):
+    h = seg // 3600
+    m = (seg % 3600) // 60
+    s = seg % 60
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
 def calcular_tempo():
     total = 3 * 60 * 60
 
@@ -81,29 +93,22 @@ def calcular_tempo():
 
     return restante, total
 
-def formatar(seg):
-    h = seg // 3600
-    m = (seg % 3600) // 60
-    s = seg % 60
-    return f"{h:02d}:{m:02d}:{s:02d}"
-
 # =========================
-# LOAD EXCEL
+# 📊 CARREGAR PERGUNTAS
 # =========================
 df = pd.read_excel("Perguntas.xlsx")
 df.columns = df.columns.str.strip()
 
-questoes = [
-    {
-        "pergunta": limpar(r["PERGUNTA"]),
-        "opcoes": [limpar(r[c]) for c in ["A","B","C","D","E"]],
-        "resposta": limpar(r["RESPOSTA"])
-    }
-    for _, r in df.iterrows()
-]
+questoes = []
+for _, row in df.iterrows():
+    questoes.append({
+        "pergunta": limpar(row["PERGUNTA"]),
+        "opcoes": [limpar(row[c]) for c in ["A","B","C","D","E"]],
+        "resposta": limpar(row["RESPOSTA"])
+    })
 
 # =========================
-# FINALIZAR
+# 🏁 FINALIZAR PROVA
 # =========================
 def finalizar():
     acertos = sum(
@@ -114,22 +119,21 @@ def finalizar():
     total = len(questoes)
     nota = (acertos / total) * 10
 
-    resultado = {
+    st.session_state.resultado = {
         "nota": round(nota, 1),
         "acertos": acertos,
         "total": total
     }
 
-    st.session_state.ultimo_resultado = resultado
     st.session_state.finalizado = True
 
 # =========================
-# LAYOUT
+# 🎯 LAYOUT
 # =========================
 col1, col2, col3 = st.columns([1.2, 4, 1.6])
 
 # =========================
-# MENU
+# 📘 MENU
 # =========================
 with col1:
     st.markdown("## 📘 Menu")
@@ -140,13 +144,12 @@ with col1:
     if st.button("📊 Resultados"):
         st.session_state.pagina = "resultado"
 
-    # 🔥 VISÍVEL SÓ PARA ADMIN
     if st.session_state.acesso == "admin":
         st.markdown("---")
-        st.success("Modo ADMIN ativado")
+        st.success("🔐 ADMIN")
 
 # =========================
-# CONTEÚDO
+# 📄 CONTEÚDO
 # =========================
 with col2:
 
@@ -160,8 +163,14 @@ with col2:
 
         restante, total_tempo = calcular_tempo()
 
-        st.write(f"⏱️ {formatar(restante)}")
+        # 🔥 COR DINÂMICA DO TEMPO
+        cor = "red" if restante < 600 else "white"
+
+        st.markdown(f"<h3 style='color:{cor}'>⏱️ {formatar(restante)}</h3>", unsafe_allow_html=True)
         st.progress(restante / total_tempo)
+
+        if restante == 0 and not st.session_state.finalizado:
+            finalizar()
 
         st.write(f"Questão {idx+1} de {total}")
         st.progress(len(st.session_state.respostas)/total)
@@ -194,39 +203,55 @@ with col2:
 
         with c2:
             if not st.session_state.finalizado:
-                if st.button("🏁 Finalizar"):
+                if st.button("🏁 Finalizar Prova"):
                     finalizar()
             else:
-                if st.button("🔁 Refazer"):
+                if st.button("🔁 Refazer Prova"):
                     st.session_state.respostas = {}
                     st.session_state.finalizado = False
                     st.session_state.indice = 0
+                    st.session_state.timer_ativo = False
 
         with c3:
             if st.button("➡ Próxima") and idx < total-1:
                 st.session_state.indice += 1
                 st.rerun()
 
+        # =========================
+        # 📊 RESULTADO IMEDIATO
+        # =========================
         if st.session_state.finalizado:
-            r = st.session_state.ultimo_resultado
+            r = st.session_state.resultado
+
             st.success(f"Nota: {r['nota']}")
-            st.write(f"Acertos: {r['acertos']}/{r['total']}")
+            st.write(f"Acertos: {r['acertos']} de {r['total']}")
+
+            st.markdown("### 📋 Revisão")
+
+            for i, q in enumerate(questoes):
+                user = st.session_state.respostas.get(i)
+                correta = q["resposta"]
+
+                if user == correta:
+                    st.success(f"{i+1}. Correta ({correta})")
+                else:
+                    st.error(f"{i+1}. Errada (Sua: {user} | Correta: {correta})")
 
 # =========================
-# NAVEGAÇÃO
+# 🔢 NAVEGAÇÃO
 # =========================
 with col3:
 
     st.markdown("### Navegação")
 
     total = len(questoes)
-    colunas = 5
+    cols = 5
 
-    for i in range(0, total, colunas):
-        cols = st.columns(colunas)
-        for j, idx in enumerate(range(i, min(i+colunas, total))):
-            with cols[j]:
+    for i in range(0, total, cols):
+        linhas = st.columns(cols)
+
+        for j, idx in enumerate(range(i, min(i+cols, total))):
+            with linhas[j]:
                 if st.button(str(idx+1)):
                     st.session_state.indice = idx
                     st.rerun()
-                    
