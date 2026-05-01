@@ -255,3 +255,4 @@ with col3:
                 if st.button(str(idx+1)):
                     st.session_state.indice = idx
                     st.rerun()
+                    
